@@ -37,13 +37,16 @@ def edit(level, word):
     proc = subprocess.Popen([edit, file])
     proc.wait()
 
-def display(level, word):
+def line():
     sys.stdout.write("-" * 80 + "\n")
+
+def display(level, word):
+    line()
     file = getFile(level, word)
     f = open(file, "r")
     sys.stdout.write(f.read())
     f.close()
-    sys.stdout.write("-" * 80 + "\n")
+    line()
 
 def setLevel(level, word, newLevel):
     assert (newLevel > Config.minLevel and newLevel < Config.maxLevel), "new level is %d" % newLevel
@@ -80,9 +83,9 @@ def train(level):
         sys.stdin.readline()
         display(level, word)
 
-        train.quitFlag = False
+        quitFlag = [False]
         def quit():
-            train.quitFlag = True
+            quitFlag[0] = True
             return True
 
         def correct():
@@ -104,32 +107,58 @@ def train(level):
                                 ), quit=False, default='n')
  
         play(menu)
-        if train.quitFlag:
+        if quitFlag[0]:
             break
 
 def add():
     sys.stdout.write("enter new word: ")
     sys.stdout.flush()
     word = sys.stdin.readline().strip()
+
+    content = grep(word)
+    if content:
+        sys.stdout.write("found the following translation:\n")
+        line()
+        sys.stdout.write(content)
+        line()
+    else:
+        sys.stdout.write("not translation found\n")
+
     level = find(word)
     if level:
         sys.stdout.write("word already exists in level %d\n" % level)
         display(level, word)
-        if level != Config.minLevel:
-            setLevel(level, word, Config.minLevel)
-            sys.stoud.write("moved to level %d now" % Config.minLevel)
-        return
 
-    content = grep(word)
-    if content == None:
-        sys.stdout.write("no match found\n")
-        return
+        def merge():
+            if content:
+                file = getFile(level, word)
+                f = open(file, "a")
+                f.write(content)
+                f.close()
+            edit(level, word)
 
-    file = getFile(Config.minLevel, word)
-    f = open(file, "w")
-    f.write(content)
-    f.close()
-    edit(Config.minLevel, word) 
+        def menu():
+            return Menu("what to do?", (
+                ("edit", "e", partial(edit, level, word)), 
+                ("move to level %d" % Config.minLevel, "m", partial(setLevel, level, word, Config.minLevel)),
+                ("merge translations", "g", merge),
+                    ))
+        play(menu)
+    else: 
+        def create():
+            if content:
+                file = getFile(Config.minLevel, word)
+                f = open(file, "w")
+                f.write(content)
+                f.close()
+                edit(Config.minLevel, word) 
+            return True
+
+        def menu():
+            return Menu("what to do?", (
+                ("add word", "a", create),))
+    
+        play(menu)
 
 
 def selectLevelMenu():
@@ -145,6 +174,7 @@ def mainMenu():
         ("add word", "a", add),
     ))
 
+init()
 sys.stdout.write("Welcome to voctrain!\n")
 play(mainMenu)
 sys.stdout.write("Good bye.\n")

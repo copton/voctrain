@@ -4,9 +4,11 @@ import os.path
 import subprocess
 import sys
 import random
+from functools import partial
 from getch import getch
 from grep import grep
 from config import Config
+from player import *
 
 def getDictPath():
     return os.path.join(os.environ['HOME'], '.voctrain')
@@ -44,7 +46,7 @@ def display(level, word):
     sys.stdout.write("-" * 80 + "\n")
 
 def setLevel(level, word, newLevel):
-    assert (newLevel > Config.minLevel and newLevel < Config.maxLevel)
+    assert (newLevel > Config.minLevel and newLevel < Config.maxLevel), "new level is %d" % newLevel
 
     file = getFile(level, word)
     newFile = getFile(newLevel, word)
@@ -77,38 +79,33 @@ def train(level):
         sys.stdout.write(word)
         sys.stdin.readline()
         display(level, word)
-    
-        while True: 
-            sys.stdout.write("correct? (y)es/(N)o/(q)uit/(e)dit) ")
-            choice = getch()
-            if choice == '\r' or choice == 'n' or choice == 'N':
-                if level != Config.minLevel:
-                    setLevel(level, word, level-1)
-                break
-            elif choice == 'y' or choice == 'Y':
-                if level != Config.maxLevel:
-                    setLevel(level, word, level+1)
-                break
-            elif choice == 'q' or choice == 'Q':
-                return
-            elif choice == 'e' or choice == 'E':
-                edit(level, word)
 
-def selectLevel():
-    while True:
-        sys.stdout.write("dictionary overview:\n")
-        for i in range(Config.minLevel, Config.maxLevel+1):
-            sys.stdout.write("level %2d: %3d words\n" % (i, count(i)))
+        train.quitFlag = False
+        def quit():
+            train.quitFlag = True
+            return True
 
-        sys.stdout.write("select level (q to quit): ")
-        choice = sys.stdin.readline().strip()
-        if choice == 'q' or choice == 'Q':
-            return
-        try:
-            level = int(choice)
-            train(level)
-        except ValueError, e:
-            pass 
+        def correct():
+            if level != Config.maxLevel:
+                setLevel(level, word, level+1)
+            return 1
+                
+        def incorrect():
+            if level != Config.minLevel:
+                setLevel(level, word, level-1)
+            return 1
+
+        def menu():
+            return Menu("correct?", (
+                ("yes", "y", correct),
+                ("no", "n", incorrect),
+                ("edit", "e", partial(edit, level, word)),
+                ("quit", "q", quit),
+                                ), quit=False, default='n')
+ 
+        play(menu)
+        if train.quitFlag:
+            break
 
 def add():
     sys.stdout.write("enter new word: ")
@@ -134,17 +131,20 @@ def add():
     f.close()
     edit(Config.minLevel, word) 
 
-def menu():
-    sys.stdout.write("Welcome to voctrain!\n")
-    while True:
-        sys.stdout.write("What do you want to do? (s)elect Level, (a)dd a word, (q)uit: ")
-        sys.stdout.flush()
-        choice = getch()
-        if choice == 's' or choice == 'S':
-            selectLevel()
-        elif choice == 'a' or choice == 'A':
-            add()
-        elif choice == 'q' or choice == 'Q':
-            return
 
-menu()
+def selectLevelMenu():
+    menu = Menu("select level", quit=False, delim='\n', footer='\n> ')
+    for i in range(Config.minLevel, Config.maxLevel+1):
+        menu.addOption(Option("level %d [%d words]" % (i, count(i)), str(i), partial(train, i)))
+    menu.addQuitOption()
+    return menu
+
+def mainMenu():
+    return Menu("main menu", (
+        ("select level", "s", partial(play, selectLevelMenu)),
+        ("add word", "a", add),
+    ))
+
+sys.stdout.write("Welcome to voctrain!\n")
+play(mainMenu)
+sys.stdout.write("Good bye.\n")

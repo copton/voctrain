@@ -102,12 +102,16 @@ def train(level):
                 setLevel(level, word, level-1)
             return 1
 
+        def _delete():
+            delete(level, word)
+            return True
+
         def menu():
             return Menu("correct?", (
                 ("yes", "y", correct),
                 ("no", "n", incorrect),
                 ("edit", "e", partial(edit, level, word)),
-                ("delete", "d", partial(delete, level, word)),
+                ("delete", "d", _delete),
                 ("quit", "q", quit),
                                 ), quit=False, default='n')
  
@@ -128,7 +132,6 @@ def add():
         line()
     else:
         sys.stdout.write("not translation found\n")
-        return
 
     level = find(word)
     if level:
@@ -152,8 +155,6 @@ def add():
         play(menu)
     else: 
         def create(doEdit):
-            assert content
-            
             file = getFile(Config.minLevel, word)
             f = open(file, "w")
             f.write(content)

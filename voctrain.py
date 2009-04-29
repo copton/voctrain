@@ -62,9 +62,7 @@ def setLevel(level, word, newLevel):
 
 def loadLevel(level):
     path = getPath(level)
-    words = os.listdir(path)
-    random.shuffle(words)
-    return words    
+    return os.listdir(path)
 
 def count(level):
     path = getPath(level)
@@ -79,7 +77,25 @@ def find(word):
     return None
 
 def train(level):
+    randomFlag = [False]
+    def yes():
+        randomFlag[0] = True
+        return True
+    
+    def menu():
+        return Menu("randomize?", (
+            ("yes", "y", yes),
+            ("no", "n", lambda : True)),
+            default='y')
+
+    play(menu)
+    
     words = loadLevel(level)
+    if randomFlag[0]:
+        random.shuffle(words)
+    else:
+        words.sort()
+
     for i in range(len(words)):
         word = words[i]
         sys.stdout.write("[%4d/%4d] " % (i+1, len(words)))

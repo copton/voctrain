@@ -37,6 +37,10 @@ def edit(level, word):
     proc = subprocess.Popen([edit, file])
     proc.wait()
 
+def delete(level, word):
+    file = getFile(level, word)
+    os.unlink(file)
+
 def line():
     sys.stdout.write("-" * 80 + "\n")
 
@@ -103,6 +107,7 @@ def train(level):
                 ("yes", "y", correct),
                 ("no", "n", incorrect),
                 ("edit", "e", partial(edit, level, word)),
+                ("delete", "d", partial(delete, level, word)),
                 ("quit", "q", quit),
                                 ), quit=False, default='n')
  
@@ -123,6 +128,7 @@ def add():
         line()
     else:
         sys.stdout.write("not translation found\n")
+        return
 
     level = find(word)
     if level:
@@ -145,18 +151,23 @@ def add():
                     ))
         play(menu)
     else: 
-        def create():
-            if content:
-                file = getFile(Config.minLevel, word)
-                f = open(file, "w")
-                f.write(content)
-                f.close()
+        def create(doEdit):
+            assert content
+            
+            file = getFile(Config.minLevel, word)
+            f = open(file, "w")
+            f.write(content)
+            f.close()
+            if doEdit:
                 edit(Config.minLevel, word) 
+
             return True
 
         def menu():
             return Menu("what to do?", (
-                ("add word", "a", create),))
+                ("add word", "a", partial(create, False)),
+                ("add word and edit", "e", partial(create, True)),
+            ))
     
         play(menu)
 

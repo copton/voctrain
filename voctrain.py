@@ -53,7 +53,7 @@ def display(level, word):
     line()
 
 def setLevel(level, word, newLevel):
-    assert (newLevel > Config.minLevel and newLevel < Config.maxLevel), "new level is %d" % newLevel
+    assert (newLevel >= Config.minLevel and newLevel <= Config.maxLevel), "new level is %d" % newLevel
 
     file = getFile(level, word)
     newFile = getFile(newLevel, word)
@@ -86,7 +86,7 @@ def train(level):
         return Menu("randomize?", (
             ("yes", "y", yes),
             ("no", "n", lambda : True)),
-            default='y')
+            default='y', quit=False)
 
     play(menu)
     
